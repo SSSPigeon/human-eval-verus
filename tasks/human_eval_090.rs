@@ -7,10 +7,109 @@ HumanEval/90
 */
 use vstd::prelude::*;
 
+use vstd::prelude::*;
+
 verus! {
+fn two_smallest(s: &Vec<i32>) -> (result: Vec<usize>)
+    ensures
+        result.len() == 0 <==> s.len() == 0,
+        result.len() == 0 || result.len() == 2,
+        result.len() > 0 ==>
+            0 <= result@[0] < s.len() && 0 <= result@[1] < s.len(),
+        result.len() > 0 ==> 
+            forall |i: int| #![trigger s[i]] 0 <= i < s.len() ==>
+                s[i] == s[result@[0] as int] || s[i] >= s[result@[1] as int],
+        result.len() > 0 ==> 
+            result@[0] == result@[1] ==> 
+                forall |i: int| #![trigger s[i]] 0 <= i < s.len() ==>
+                    s[i] == s[0],
+        result.len() > 0 ==> 
+            result@[0] != result@[1] ==> 
+                s[result@[0] as int] < s[result@[1] as int],
+        
+{
+    let mut result = Vec::new();
+    if s.len() == 0 {
+        return result;
+    }
 
-// TODO: Put your solution (the specification, implementation, and proof) to the task here
+    let mut min1 = 0;
+    let mut min2 = 0;
 
+    let mut i: usize = 0;
+    while i < s.len()
+        invariant
+            0 <= min1 < s.len(),
+            0 <= min2 < s.len(),
+            min1 != min2 ==> s[min1 as int] < s[min2 as int],
+            s[min1 as int] == s[min2 as int] ==> 
+                forall |j: int| 0 <= j < i ==> s[j] == s[min1 as int],
+            forall |j: int| 0 <= j < i ==> 
+                s[j] == s[min1 as int] || s[j] >= s[min2 as int],
+            exists |j: int| 0 <= j < i ==> s[j] == s[min1 as int],
+        decreases (s.len() - i),
+    {
+        let x = s[i];
+
+        if s[min2] == s[min1] {
+            if x > s[min1] {
+                min2 = i;
+            } else if x < s[min1] {
+                assert(forall |j: int| 0 <= j < i ==> s[j] >= s[min2 as int]);
+                min2 = min1;
+                min1 = i;
+            } 
+        } else {
+            if x < s[min1] {
+                min2 = min1;
+                min1 = i;
+            } else if s[min1] < x && x < s[min2] {
+                min2 = i;
+            }
+        }
+
+        i += 1;
+    }
+
+    result.push(min1);
+    result.push(min2);
+    result
+}
+
+// A helper predicate describing "v is the minimum among values strictly 
+// greater than the global minimum"
+spec fn is_next_smallest_value(s: Seq<i32>, v: i32) -> bool {
+    exists |m_i: int| #![trigger s[m_i]] 
+        0 <= m_i < s.len() && forall |j:int| 0 <= j < s.len() ==> 
+            s[m_i] <= s[j] && v > s[m_i]
+            && forall |j:int| #![trigger s[j]] 
+                0 <= j < s.len() && s[j] > s[m_i] ==> s[j] >= v
+}
+
+fn next_smallest(s: &Vec<i32>) -> (ret: Option<i32>)
+    ensures
+        // None iff empty or all elements equal
+        ret.is_none() <==> s.len()==0 ||
+            (s.len() > 0 && 
+            forall |i: int| #![trigger s[i]] 0 <= i < s.len() ==> s[i]==s[0]),
+        // Some(v) iff there exists a value strictly greater than the global 
+        // minimum and v is the least such value
+        ret.is_some() ==> is_next_smallest_value(s@, ret.unwrap())
+{
+    let two = two_smallest(s);
+    if two.len() == 0 {
+        return None;
+    }
+
+    let i0 = two[0];
+    let i1 = two[1];
+
+    if i0 == i1 {
+        return None;
+    } else {
+        return Some(s[i1]);
+    }
+}
 } // verus!
 fn main() {}
 
