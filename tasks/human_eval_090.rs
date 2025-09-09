@@ -9,6 +9,8 @@ use vstd::prelude::*;
 
 use vstd::prelude::*;
 
+use vstd::prelude::*;
+
 verus! {
 fn two_smallest(s: &Vec<i32>) -> (result: Vec<usize>)
     ensures
@@ -84,15 +86,17 @@ spec fn is_next_smallest_value(s: Seq<i32>, v: i32) -> bool {
             s[m_i] <= s[j] && v > s[m_i]
             && forall |j:int| #![trigger s[j]] 
                 0 <= j < s.len() && s[j] > s[m_i] ==> s[j] >= v
+    &&
+    exists |m_j: int| #![trigger s[m_j]] 0 <= m_j < s.len() ==> s[m_j] == v
 }
 
 fn next_smallest(s: &Vec<i32>) -> (ret: Option<i32>)
     ensures
-        // None iff empty or all elements equal
-        ret.is_none() <==> s.len()==0 ||
+        // None only if empty or all elements equal
+        ret.is_none() ==> s.len()==0 ||
             (s.len() > 0 && 
             forall |i: int| #![trigger s[i]] 0 <= i < s.len() ==> s[i]==s[0]),
-        // Some(v) iff there exists a value strictly greater than the global 
+        // Some(v) only if there exists a value strictly greater than the global 
         // minimum and v is the least such value
         ret.is_some() ==> is_next_smallest_value(s@, ret.unwrap())
 {
