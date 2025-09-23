@@ -45,6 +45,11 @@ fn is_prime_impl(n: u8) -> (res: bool)
     return res;
 }
 
+/* 
+This function takes lst: Vec<u8> as an input, and returns:
+a. 0, if lst is empty, or doesn't contain prime numbers
+b. the largest prime number in lst, otherwise
+*/
 fn max_prime(lst: Vec<u8>) -> (ret: u8) 
     ensures
         lst.len() == 0 ==> ret == 0,
